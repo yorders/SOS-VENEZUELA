@@ -1018,3 +1018,6 @@ async function startServer() {
 }
 
 startServer();
+
+// Al final de server.ts, añade esto:
+module.exports = app;
