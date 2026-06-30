@@ -1019,5 +1019,9 @@ async function startServer() {
 
 startServer();
 
+app.get('/api/test', (req, res) => {
+  res.json({ mensaje: "¡El servidor está funcionando correctamente!" });
+});
+
 // Al final de server.ts, añade esto:
 module.exports = app;
