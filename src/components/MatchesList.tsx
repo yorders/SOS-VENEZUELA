@@ -161,30 +161,44 @@ export default function MatchesList({ matches, onResolveReport }: MatchesListPro
               </div>
 
               {/* Action Bar */}
-              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
-                <a
-                  href={`tel:${report.reporterContact}`}
-                  className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-950 text-white text-center rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
-                >
-                  <Phone className="h-3 w-3" />
-                  Contactar ({report.reporterName})
-                </a>
-                
-                {isResolved ? (
-                  <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg flex items-center gap-1">
-                    <Check className="h-3 w-3" />
-                    Reencontrado
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleResolve(report.id)}
-                    className="py-1.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition"
-                  >
-                    ¿Es él/ella? Marcar Encontrado
-                  </button>
-                )}
-              </div>
+  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
+    <a
+      href={`tel:${report.reporterContact}`}
+      className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-950 text-white text-center rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+    >
+      <Phone className="h-3 w-3" />
+      Contactar
+    </a>
+    
+    {isResolved ? (
+      <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg flex items-center gap-1">
+        <Check className="h-3 w-3" />
+        Resuelto
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={() => handleResolve(report.id)}
+        className="py-1.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition"
+      >
+        Marcar Encontrado
+      </button>
+    )}
+
+    {/* Botón Administrador */}
+    <button
+      onClick={async () => {
+        if(confirm('¿Seguro que quieres ELIMINAR este reporte?')) {
+          await fetch(`/api/reports/${report.id}`, { method: 'DELETE' });
+          window.location.reload();
+        }
+      }}
+      className="py-1.5 px-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-lg text-[10px] font-bold cursor-pointer transition"
+      title="Eliminar reporte"
+    >
+      ✕
+    </button>
+  </div>
 
             </div>
           );
