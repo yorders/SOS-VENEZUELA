@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  
+  --color-brand-yellow: #FFC72C;
+  --color-brand-blue: #00247D;
+  --color-brand-red: #CF142B;
+  
+  --color-pearl-white: #FBFBFA;
+  --color-pearl-gray: #F2F4F5;
+}
+
+/* Custom CSS classes */
+.venezuela-gradient {
+  background: linear-gradient(to right, #FFC72C 0%, #FFC72C 33%, #00247D 33%, #00247D 66%, #CF142B 66%, #CF142B 100%);
+}
+
+.venezuela-border-gradient {
+  border-image: linear-gradient(to right, #FFC72C, #00247D, #CF142B) 1;
+}
+
+/* Leaflet maps custom adjustments */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 0.5rem;
+  z-index: 10;
+}
+
