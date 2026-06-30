@@ -1,3 +1,37 @@
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializar el cliente usando las variables que pusimos en Vercel
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Función auxiliar para convertir tu foto Base64 en archivo real y subirlo a Storage
+async function uploadBase64ToStorage(base64Data: string, fileName: string): Promise<string | null> {
+  try {
+    const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Image, 'base64');
+
+    const { data, error } = await supabase.storage
+      .from('photos')
+      .upload(`reports/${fileName}`, buffer, {
+        contentType: 'image/png',
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('photos')
+      .getPublicUrl(`reports/${fileName}`);
+
+    return publicUrlData.publicUrl;
+  } catch (err) {
+    console.error("Error al subir imagen a Supabase Storage:", err);
+    return null;
+  }
+}
+
+
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -669,6 +703,24 @@ app.post("/api/reports", async (req, res) => {
         newReport.gender = facialFeatures.gender;
       }
     }
+    // 1. Subir la foto real al almacenamiento de Supabase Storage
+    const fotoPublicaUrl = await uploadBase64ToStorage(newReport.photoUrl, `${newReport.id}.png`);
+    
+    // 2. Si se subió bien, cambiamos el texto Base64 gigante por el enlace de internet
+    if (fotoPublicaUrl) {
+      newReport.photoUrl = fotoPublicaUrl;
+    }
+
+    // 3. Guardar el reporte completo en la base de datos de Supabase
+    const { error: dbError } = await supabase
+      .from('reports')
+      .insert([newReport]);
+
+    if (dbError) {
+      console.error("Error guardando el reporte en Supabase DB:", dbError);
+    }
+
+    // Mantener la copia local por compatibilidad con el resto de tus funciones
     reports.unshift(newReport);
 
     // AUTOMATIC MATCHING PROCESS
