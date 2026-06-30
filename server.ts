@@ -677,7 +677,14 @@ app.post("/api/reports", async (req, res) => {
           });
 
           // Ruta para eliminar un reporte
+// Ruta para eliminar un reporte (Protegida)
 app.delete("/api/reports/:id", async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  
+  if (token !== process.env.ADMIN_TOKEN) {
+    return res.status(403).json({ error: "Acceso denegado" });
+  }
+
   const { id } = req.params;
   const { error } = await supabase.from('reports').delete().eq('id', id);
   
