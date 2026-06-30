@@ -676,6 +676,25 @@ app.post("/api/reports", async (req, res) => {
             }
           });
 
+          // Ruta para eliminar un reporte
+app.delete("/api/reports/:id", async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from('reports').delete().eq('id', id);
+  
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Reporte eliminado con éxito" });
+});
+
+// Ruta para editar un reporte
+app.put("/api/reports/:id", async (req, res) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+  const { error } = await supabase.from('reports').update(updatedData).eq('id', id);
+  
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Reporte actualizado con éxito" });
+});
+
           const resultText = response.text;
           if (resultText) {
             const parsedData = JSON.parse(resultText.trim());
