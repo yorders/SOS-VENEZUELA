@@ -8,6 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Función auxiliar para convertir tu foto Base64 en archivo real y subirlo a Storage
 async function uploadBase64ToStorage(base64Data: string, fileName: string): Promise<string | null> {
   try {
+    if (!base64Data) return null;
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64Image, 'base64');
 
@@ -30,7 +31,6 @@ async function uploadBase64ToStorage(base64Data: string, fileName: string): Prom
     return null;
   }
 }
-
 
 import express from "express";
 import path from "path";
