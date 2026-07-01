@@ -167,7 +167,7 @@ export default function ReportForm({ onSuccess }: ReportFormProps) {
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            🧑 Persona / Humano
+            🧑 Personas
           </button>
           <button
             type="button"
@@ -181,7 +181,7 @@ export default function ReportForm({ onSuccess }: ReportFormProps) {
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            🐾 Mascota (Perro, Gato, etc.)
+            🐾 Mascotas
           </button>
         </div>
       </div>
