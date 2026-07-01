@@ -1,13 +1,6 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  
-  "build": {
-    "env": {
-      "VITE_SUPABASE_URL": "@supabase_url",
-      "VITE_SUPABASE_KEY": "@supabase_key"
-    }
-  }
+    { "source": "/(.*)", "destination": "/dist/index.html" }
+  ]
 }
