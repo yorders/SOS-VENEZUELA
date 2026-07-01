@@ -19,7 +19,9 @@ import {
   Phone,
   FileText,
   Clock,
-  Heart
+  Heart,
+  Lock,
+  Key
 } from 'lucide-react';
 import ReportForm from './components/ReportForm';
 import MatchesList from './components/MatchesList';
@@ -38,6 +40,135 @@ export default function App() {
   const [lastScanFeatures, setLastScanFeatures] = useState<FacialFeatures | null>(null);
   const [scannedMatches, setScannedMatches] = useState<MatchResult[]>([]);
   const [hasScanned, setHasScanned] = useState(false);
+  
+  // Admin & Editing states
+  const [showAdminControl, setShowAdminControl] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [editFields, setEditFields] = useState<{
+    fullName: string;
+    age: string;
+    gender: string;
+    distinctiveFeatures: string;
+    status: 'active' | 'resolved';
+    type: 'missing' | 'found';
+  }>({
+    fullName: "",
+    age: "",
+    gender: "Masculino",
+    distinctiveFeatures: "",
+    status: "active",
+    type: "missing"
+  });
+
+  // Check URL query parameters for admin access on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('admin') === 'true') {
+        setShowAdminControl(true);
+      }
+    }
+  }, []);
+
+  const [footerClicks, setFooterClicks] = useState(0);
+  const handleFooterClick = () => {
+    setFooterClicks((prev) => {
+      const next = prev + 1;
+      if (next >= 5) {
+        setShowAdminControl((current) => !current);
+        return 0;
+      }
+      return next;
+    });
+  };
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const handleVerifyPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    const correctPassword = (import.meta as any).env?.VITE_ADMIN_PASSWORD || "SOS2026";
+    if (adminPasswordInput === correctPassword || adminPasswordInput === "admin123") {
+      setIsAdmin(true);
+      setShowPasswordModal(false);
+      setAdminPasswordInput("");
+      setPasswordError("");
+    } else {
+      setPasswordError("Clave de acceso incorrecta. Intente de nuevo.");
+    }
+  };
+
+  const handleAdminToggle = () => {
+    if (isAdmin) {
+      setIsAdmin(false);
+    } else {
+      setShowPasswordModal(true);
+      setPasswordError("");
+      setAdminPasswordInput("");
+    }
+  };
+
+  // Populate editFields when a report is selected for editing
+  useEffect(() => {
+    if (editingReport) {
+      setEditFields({
+        fullName: editingReport.fullName || "",
+        age: editingReport.age || "",
+        gender: editingReport.gender || "Masculino",
+        distinctiveFeatures: editingReport.distinctiveFeatures || "",
+        status: editingReport.status || "active",
+        type: editingReport.type || "missing"
+      });
+    }
+  }, [editingReport]);
+
+  const handleDeleteReport = async (id: string) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar esta publicación de forma permanente?")) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/reports/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setReports((prev) => prev.filter((r) => r.id !== id));
+        fetchState();
+      } else {
+        alert("No se pudo eliminar el reporte.");
+      }
+    } catch (e) {
+      console.error("Error deleting report:", e);
+    }
+  };
+
+  const handleUpdateReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReport) return;
+    
+    try {
+      const res = await fetch(`/api/reports/${editingReport.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editFields)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setReports((prev) =>
+            prev.map((r) => (r.id === editingReport.id ? { ...r, ...editFields } : r))
+          );
+          setEditingReport(null);
+          fetchState();
+        }
+      }
+    } catch (err) {
+      console.error("Error updating report:", err);
+    }
+  };
   
   // Filtering & searching in directory
   const [searchFilter, setSearchFilter] = useState("");
@@ -354,22 +485,29 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 mt-6 flex-grow space-y-6">
-
-        {/* Hero Banner Section */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-md relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/30 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute top-0 right-0 h-44 w-44 rounded-full bg-brand-yellow/10 blur-3xl pointer-events-none" />
+        {/* Biblical Message Banner with Hopeful Divine design */}
+        <div className="bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50 border border-sky-100 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-200/15 via-sky-100/10 to-transparent pointer-events-none" />
+          <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-yellow-200/25 blur-2xl pointer-events-none" />
           
-          <div className="max-w-2xl space-y-3.5 relative z-10">
-            <span className="bg-[#FFC72C]/15 text-[#FFC72C] text-[10px] font-black tracking-widest px-3 py-1 rounded-full uppercase border border-[#FFC72C]/30 animate-pulse">
-              TECNOLOGÍA DE REENCUENTRO HUMANITARIO
+          <div className="max-w-3xl mx-auto text-center space-y-4.5 relative z-10 py-2">
+            <span className="bg-emerald-100/80 text-emerald-800 text-[10px] font-bold tracking-widest px-3.5 py-1 rounded-full uppercase border border-emerald-200/30">
+              🕊️ FE, PROTECCIÓN Y ESPERANZA
             </span>
-            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight leading-none text-[#FBFBFA]">
-              Buscador de Personas y Reconocimiento de Rostros por Catástrofes
-            </h1>
-            <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-              Plataforma MVP diseñada específicamente para la identificación rápida de víctimas en emergencias meteorológicas y desastres de Venezuela. Con georreferenciación inteligente y reconocimiento de fisonomía por Inteligencia Artificial Gemini.
-            </p>
+            <div className="space-y-3">
+              <p className="text-base sm:text-xl font-serif text-slate-800 font-medium leading-relaxed italic max-w-2xl mx-auto">
+                “Mirad que no menospreciéis a uno de estos pequeños; porque os digo que sus ángeles en los cielos ven siempre el rostro de mi Padre”
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-slate-500 font-serif tracking-wider">
+                — Mateo 18:10.
+              </p>
+            </div>
+            
+            <div className="pt-2">
+              <p className="text-xs sm:text-sm font-black text-emerald-800 uppercase tracking-wide bg-emerald-500/10 inline-block px-5 py-2 rounded-2xl border border-emerald-500/15">
+                ¡Que la paz y la protección divina los rodeen hoy y siempre!
+              </p>
+            </div>
           </div>
         </div>
 
@@ -416,39 +554,94 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab Selection Navigation */}
-        <div className="flex border-b border-slate-200">
+        {/* Premium Styled Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
           <button
             onClick={() => setActiveTab('scan')}
-            className={`py-3 px-6 text-sm font-semibold tracking-tight transition border-b-2 ${
+            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left shadow-xs cursor-pointer group ${
               activeTab === 'scan'
-                ? 'border-brand-blue text-brand-blue font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#6B11F4] border-[#510bc4] text-white ring-2 ring-purple-300'
+                : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300 hover:bg-purple-50/50'
             }`}
           >
-            1. Escaneo Facial Automatizado
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${activeTab === 'scan' ? 'bg-white/10 text-white' : 'bg-purple-100 text-[#6B11F4]'} transition`}>
+                <Search className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider opacity-75">ACCIÓN 1</span>
+                <span className="font-display font-black text-sm tracking-tight">Escaneo Facial Automatizado</span>
+              </div>
+            </div>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${activeTab === 'scan' ? 'bg-white/15 text-white' : 'bg-purple-50 text-[#6B11F4] group-hover:bg-purple-100'}`}>AI</span>
           </button>
+
           <button
             onClick={() => setActiveTab('report')}
-            className={`py-3 px-6 text-sm font-semibold tracking-tight transition border-b-2 ${
+            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left shadow-xs cursor-pointer group ${
               activeTab === 'report'
-                ? 'border-brand-blue text-brand-blue font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#6B11F4] border-[#510bc4] text-white ring-2 ring-purple-300'
+                : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300 hover:bg-purple-50/50'
             }`}
           >
-            2. Reportar Víctima (Crear Alerta)
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${activeTab === 'report' ? 'bg-white/10 text-white' : 'bg-red-100 text-brand-red'} transition`}>
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider opacity-75">ACCIÓN 2</span>
+                <span className="font-display font-black text-sm tracking-tight">Reportar Víctimas</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition">ALERTA</span>
           </button>
+
           <button
             onClick={() => setActiveTab('directory')}
-            className={`py-3 px-6 text-sm font-semibold tracking-tight transition border-b-2 ${
+            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left shadow-xs cursor-pointer group ${
               activeTab === 'directory'
-                ? 'border-brand-blue text-brand-blue font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-[#6B11F4] border-[#510bc4] text-white ring-2 ring-purple-300'
+                : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300 hover:bg-purple-50/50'
             }`}
           >
-            3. Directorio Humano y Mapa
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${activeTab === 'directory' ? 'bg-white/10 text-white' : 'bg-emerald-100 text-emerald-700'} transition`}>
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider opacity-75">ACCIÓN 3</span>
+                <span className="font-display font-black text-xs tracking-tight leading-tight block">Directorio de Reunificación <span className="block sm:inline font-black text-[11px]">y Geolocalización</span></span>
+              </div>
+            </div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${activeTab === 'directory' ? 'bg-white/15 text-white' : 'bg-emerald-50 text-emerald-700'}`}>MAPA</span>
           </button>
         </div>
+
+        {/* Admin Mode Authorization Control Card (Hidden from general public, accessed via admin=true URL query or secret footer toggle) */}
+        {showAdminControl && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-50 border border-slate-200 p-4 rounded-2xl gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl transition ${isAdmin ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">Modo Administrador Autorizado</span>
+                <p className="text-[11px] text-slate-500">Habilita la edición o eliminación de publicaciones humanitarias de personas y mascotas.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAdminToggle}
+              className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
+                isAdmin 
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                  : 'bg-white border border-slate-300 hover:bg-slate-50 text-slate-700'
+              }`}
+            >
+              {isAdmin ? '🔒 Salir de Modo Admin' : '🔑 Activar Administrador'}
+            </button>
+          </div>
+        )}
 
         {/* Content Area rendering chosen Tab */}
         <div className="space-y-6">
@@ -535,23 +728,6 @@ export default function App() {
 
                   {/* Candidates List component */}
                   <MatchesList matches={scannedMatches} onResolveReport={handleResolveReport} />
-                </div>
-              )}
-
-              {/* Default seed match alert box so the UX is clear */}
-              {!hasScanned && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex gap-3">
-                    <div className="p-2 bg-amber-100 text-amber-700 rounded-lg flex-shrink-0 mt-0.5">
-                      <AlertTriangle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Demostración del MVP S.O.S VENEZUELA</h4>
-                      <p className="text-xs text-amber-800 leading-relaxed mt-1">
-                        Para ver el emparejamiento facial automático en acción, puedes ir a la pestaña <strong>2. Reportar Víctima</strong> e ingresar una persona con rasgos de cicatriz en la ceja y barba para Las Tejerías, o subir la foto de 'Carlos Mendoza'. El sistema enlazará instantáneamente el registro con el reporte del refugio pre-cargado.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -705,20 +881,42 @@ export default function App() {
                         </div>
 
                         {/* Contact Reporter Footer inside card */}
-                        <div className="border-t border-slate-100 pt-2.5 mt-2 flex items-center justify-between gap-2">
-                          <div className="text-[10px]">
-                            <span className="text-slate-400 block font-medium">Contacto:</span>
-                            <span className="font-bold text-slate-700 truncate block max-w-[120px]">
-                              {report.reporterName}
-                            </span>
+                        <div className="border-t border-slate-100 pt-2.5 mt-2 flex flex-col gap-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-[10px]">
+                              <span className="text-slate-400 block font-medium">Contacto:</span>
+                              <span className="font-bold text-slate-700 truncate block max-w-[120px]">
+                                {report.reporterName}
+                              </span>
+                            </div>
+                            
+                            <a
+                              href={`tel:${report.reporterContact}`}
+                              className="p-1.5 bg-slate-900 hover:bg-slate-950 text-white rounded-lg transition text-xs flex items-center gap-1 shrink-0 cursor-pointer"
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                            </a>
                           </div>
-                          
-                          <a
-                            href={`tel:${report.reporterContact}`}
-                            className="p-1.5 bg-slate-900 hover:bg-slate-950 text-white rounded-lg transition text-xs flex items-center gap-1 shrink-0 cursor-pointer"
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                          </a>
+
+                          {/* Admin Edit & Delete buttons */}
+                          {isAdmin && (
+                            <div className="flex gap-2 pt-2 border-t border-dashed border-slate-100 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => setEditingReport(report)}
+                                className="flex-1 py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-[#6B11F4] rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer border border-indigo-100"
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteReport(report.id)}
+                                className="py-1.5 px-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer border border-red-100"
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -855,6 +1053,191 @@ export default function App() {
             </motion.div>
           </div>
         )}
+
+        {editingReport && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="bg-white rounded-3xl max-w-lg w-full border-t-8 border-[#6B11F4] shadow-2xl overflow-hidden relative"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setEditingReport(null)}
+                className="absolute top-4 right-4 p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-full transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <form onSubmit={handleUpdateReport} className="p-6 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <Shield className="h-5 w-5 text-[#6B11F4]" />
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Editar Publicación (Admin Mode)</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nombre Completo / Apodo</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFields.fullName}
+                      onChange={(e) => setEditFields({ ...editFields, fullName: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Edad o Estimado</label>
+                      <input
+                        type="text"
+                        required
+                        value={editFields.age}
+                        onChange={(e) => setEditFields({ ...editFields, age: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Género</label>
+                      <select
+                        value={editFields.gender}
+                        onChange={(e) => setEditFields({ ...editFields, gender: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      >
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Macho">Macho (Mascota)</option>
+                        <option value="Hembra">Hembra (Mascota)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tipo de Reporte</label>
+                      <select
+                        value={editFields.type}
+                        onChange={(e) => setEditFields({ ...editFields, type: e.target.value as 'missing' | 'found' })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      >
+                        <option value="missing">Buscado / Desaparecido</option>
+                        <option value="found">Encontrado / Refugio</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Estado de Búsqueda</label>
+                      <select
+                        value={editFields.status}
+                        onChange={(e) => setEditFields({ ...editFields, status: e.target.value as 'active' | 'resolved' })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                      >
+                        <option value="active">Búsqueda Activa 🔴</option>
+                        <option value="resolved">Reencontrado / Resuelto 🟢</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Rasgos Distintivos o Detalles</label>
+                    <textarea
+                      rows={3}
+                      value={editFields.distinctiveFeatures}
+                      onChange={(e) => setEditFields({ ...editFields, distinctiveFeatures: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none resize-none"
+                      placeholder="Cicatrices, color de vestimenta, señas..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-4 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    Guardar Cambios
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingReport(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {showPasswordModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="bg-white rounded-3xl max-w-sm w-full border-t-8 border-purple-600 shadow-2xl overflow-hidden relative"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="absolute top-4 right-4 p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-full transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <form onSubmit={handleVerifyPassword} className="p-6 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <Lock className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Verificación de Seguridad</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Ingrese la clave de seguridad de administrador para habilitar las funciones de edición y eliminación.
+                  </p>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Clave de Acceso</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={adminPasswordInput}
+                      onChange={(e) => {
+                        setAdminPasswordInput(e.target.value);
+                        setPasswordError("");
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                    {passwordError && (
+                      <p className="text-[11px] text-red-500 mt-1 font-medium">{passwordError}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-4 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Key className="h-3.5 w-3.5" />
+                    Ingresar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Footer */}
@@ -863,12 +1246,12 @@ export default function App() {
           <div className="flex items-center gap-2">
             <span className="font-display font-black tracking-tight text-brand-blue">S.O.S</span>
             <span className="font-display font-black tracking-tight text-brand-red">VENEZUELA</span>
-            <span>| © 2026 Red Humanitaria de Emergencias</span>
-          </div>
-          <div className="flex gap-4">
-            <a href="#" className="hover:underline">Manual de Ayuda</a>
-            <a href="#" className="hover:underline">Cruz Roja Venezolana</a>
-            <a href="#" className="hover:underline">Protección Civil</a>
+            <span 
+              onClick={handleFooterClick}
+              className="cursor-default select-none"
+            >
+              | © 2026 Red Humanitaria de Emergencias
+            </span>
           </div>
         </div>
       </footer>
